@@ -51,7 +51,16 @@ namespace Binarysharp.MemoryManagement.Internals
             // Gather information related to the provided type
             IsIntPtr = typeof(T) == typeof(IntPtr);
             RealType = typeof(T);
-            Size = TypeCode == TypeCode.Boolean ? 1 : Marshal.SizeOf(RealType);
+
+            // Special case for array size
+            if (typeof(T).IsArray)
+            {
+                Size = 0;
+            }
+            else
+            {
+                Size = TypeCode == TypeCode.Boolean ? 1 : Marshal.SizeOf(RealType);
+            }
             TypeCode = Type.GetTypeCode(RealType);
             // Check if the type can be stored in registers
             CanBeStoredInRegisters =
@@ -97,6 +106,17 @@ namespace Binarysharp.MemoryManagement.Internals
                                 return BitConverter.GetBytes(((IntPtr)(object)obj).ToInt64());
                         }
                     }
+
+                    if (typeof(T).IsArray)
+                    {
+                        Array objAsArray = ((Array)(object)obj);
+                        Size = objAsArray.Length * Marshal.SizeOf(objAsArray.GetValue(0));
+
+                        byte[] result = new byte[Size];
+                        Buffer.BlockCopy(objAsArray, 0, result, 0, result.Length);
+                        return result;
+                    }
+
                     break;
                 case TypeCode.Boolean:
                     return BitConverter.GetBytes((bool)(object)obj);
